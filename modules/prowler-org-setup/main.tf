@@ -128,7 +128,7 @@ resource "aws_iam_role_policy" "prowler_audit_policy" {
           "iam:GenerateCredentialReport",
           "iam:Get*",
           "iam:List*",
-          "organizations:ListAccounts"
+          "organizations:ListAccounts",
           "s3:ListAllMyBuckets",
           "s3:GetBucketLocation",
           "s3:ListBucket",
