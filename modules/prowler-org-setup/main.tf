@@ -67,6 +67,15 @@ resource "aws_iam_role_policy" "github_prowler_runner_policy" {
         ],
         Resource = "arn:aws:iam::*:role/OrganizationAccountAccessRole"
       },
+      
+      {
+        Effect = "Allow",
+        Action = [
+        "organizations:ListAccounts"
+        ],
+        Resource = "*"
+      }
+
       {
         Effect = "Allow",
         Action = [
