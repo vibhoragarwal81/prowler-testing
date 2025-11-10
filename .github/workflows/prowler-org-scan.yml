@@ -27,7 +27,7 @@ jobs:
       - name: Get list of AWS accounts in the org
         id: list_accounts
         run: |
-          aws organizations list-accounts --query "Accounts[?Status=='ACTIVE'].Id" --output text > accounts.txt
+          aws organizations list-accounts --query "Accounts[?Status=='ACTIVE'].Id" --output text | tr '\t' '\n' > accounts.txt
 
       - name: Install Prowler CLI
         run: |
