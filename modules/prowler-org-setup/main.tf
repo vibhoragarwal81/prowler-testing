@@ -74,7 +74,7 @@ resource "aws_iam_role_policy" "github_prowler_runner_policy" {
         "organizations:ListAccounts"
         ],
         Resource = "*"
-      }
+      },
 
       {
         Effect = "Allow",
