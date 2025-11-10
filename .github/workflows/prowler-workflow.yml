@@ -31,8 +31,10 @@ jobs:
       - name: Install Prowler
         run: |
           git clone https://github.com/prowler-cloud/prowler.git
-          cd prowler
-          ./install.sh
+          cd prowler         
+          pip install -r requirements.txt
+          chmod +x prowler
+
 
       - name: Run Prowler on each account
         run: |
