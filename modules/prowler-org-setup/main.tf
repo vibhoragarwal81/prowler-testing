@@ -1,3 +1,6 @@
+provider "aws" {
+  region = var.region
+}
 
 variable "org_management_account_id" {}
 variable "results_bucket_name" {}
