@@ -41,6 +41,7 @@ jobs:
 
       - name: Create ProwlerAuditRole in downstream accounts
         run: |
+          export MANAGEMENT_ROLE_ARN=${{ secrets.MANAGEMENT_ROLE_ARN }}
           python create_prowler_roles.py
 
       - name: Run Prowler scans
