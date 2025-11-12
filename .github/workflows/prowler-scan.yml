@@ -1,0 +1,70 @@
+name: Prowler Multi-Account Scan
+
+on:
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Authenticate to Azure
+        run: |
+          az login --service-principal \
+            --tenant ${{ secrets.AZURE_TENANT_ID }} \
+            --username ${{ secrets.AZURE_CLIENT_ID }} \
+            --password ${{ secrets.AZURE_CLIENT_SECRET }}
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.MANAGEMENT_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Terraform Apply
+        run: |
+          cd terraform
+          terraform init
+          terraform apply -auto-approve
+
+      - name: Install Python dependencies
+        run: |
+          pip install boto3 prowler
+
+      - name: Create ProwlerAuditRole in downstream accounts
+        run: |
+          python create_prowler_roles.py
+
+      - name: Run Prowler scans
+        run: |
+          aws organizations list-accounts --query "Accounts[?Status=='ACTIVE'].Id" --output text | tr '\t' '\n' > accounts.txt
+          while read account_id; do
+            creds=$(aws sts assume-role \
+              --role-arn arn:aws:iam::$account_id:role/ProwlerAuditRole \
+              --role-session-name prowler-session \
+              --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+              --output text)
+
+            export AWS_ACCESS_KEY_ID=$(echo $creds | awk '{print $1}')
+            export AWS_SECRET_ACCESS_KEY=$(echo $creds | awk '{print $2}')
+            export AWS_SESSION_TOKEN=$(echo $creds | awk '{print $3}')
+
+            prowler -M csv,json,html -S -A $account_id -R us-east-1 \
+              --output-filename prowler-report-$account_id
+
+            mkdir -p reports
+            mv prowler-report-$account_id* reports/
+
+          done < accounts.txt
+
+      - name: Upload reports to GitHub
+        uses: actions/upload-artifact@v3
+        with:
+          name: prowler-reports
+          path: reports/
