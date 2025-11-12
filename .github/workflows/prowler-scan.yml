@@ -12,7 +12,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Authenticate to Azure
         run: |
@@ -22,7 +22,7 @@ jobs:
             --password ${{ secrets.AZURE_CLIENT_SECRET }}
 
       - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.MANAGEMENT_ROLE_ARN }}
           aws-region: us-east-1
@@ -64,7 +64,7 @@ jobs:
           done < accounts.txt
 
       - name: Upload reports to GitHub
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: prowler-reports
           path: reports/
