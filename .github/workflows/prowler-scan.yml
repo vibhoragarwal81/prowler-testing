@@ -41,7 +41,7 @@ jobs:
 
       - name: Create ProwlerAuditRole in downstream accounts
         run: |
-          python modules/prowler-org-setup/create_prowler_roles.py
+          python create_prowler_roles.py
 
       - name: Run Prowler scans
         run: |
