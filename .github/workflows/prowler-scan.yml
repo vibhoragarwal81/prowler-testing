@@ -19,7 +19,8 @@ jobs:
           az login --service-principal \
             --tenant ${{ secrets.AZURE_TENANT_ID }} \
             --username ${{ secrets.AZURE_CLIENT_ID }} \
-            --password ${{ secrets.AZURE_CLIENT_SECRET }}
+            --password ${{ secrets.AZURE_CLIENT_SECRET }} \
+            --allow-no-subscriptions
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
