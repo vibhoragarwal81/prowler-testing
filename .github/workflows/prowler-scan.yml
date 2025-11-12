@@ -22,11 +22,18 @@ jobs:
             --password ${{ secrets.AZURE_CLIENT_SECRET }} \
             --allow-no-subscriptions
 
+      - name: Debug OIDC Token
+        run: |
+          echo "Dumping OIDC token claims..."
+          curl -s $ACTIONS_ID_TOKEN_REQUEST_URL \
+            -H "Authorization: Bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" | jq .
+
       - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v3
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.MANAGEMENT_ROLE_ARN }}
           aws-region: us-east-1
+          role-session-name: "prowlersession"
 
       - name: Terraform Apply
         run: |
