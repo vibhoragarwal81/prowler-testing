@@ -35,12 +35,6 @@ jobs:
           aws-region: us-east-1
           role-session-name: "prowlersession"
 
-      - name: Terraform Apply
-        run: |
-          cd terraform
-          terraform init
-          terraform apply -auto-approve
-
       - name: Install Python dependencies
         run: |
           pip install boto3 prowler
