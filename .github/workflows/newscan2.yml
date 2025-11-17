@@ -1,0 +1,79 @@
+name: Prowlernewscan2
+
+on:
+  workflow_dispatch:
+
+jobs:
+  prowler-org-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    env:
+      AWS_REGION: us-east-1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.MANAGEMENT_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: prowlersession
+
+      - name: Install Prowler
+        run: pip install prowler
+
+      - name: Get list of AWS accounts in the org
+        id: list_accounts
+        run: |
+          aws organizations list-accounts --query "Accounts[?Status=='ACTIVE'].Id" --output text | tr '\t' '\n' > accounts.txt
+          cat accounts.txt
+
+      - name: Save management account credentials
+        id: save_creds
+        run: |
+          echo "MGMT_AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> $GITHUB_ENV
+          echo "MGMT_AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $GITHUB_ENV
+          echo "MGMT_AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN" >> $GITHUB_ENV
+          echo "MGMT_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
+
+      - name: Run Prowler scan on each account
+        run: |
+          while read account_id; do
+            if [ "$account_id" = "$MGMT_ACCOUNT_ID" ]; then
+              echo "Skipping management account: $account_id"
+              continue
+            fi
+
+            echo "Scanning account: $account_id"
+
+            # Reset to management account credentials before each assume-role
+            export AWS_ACCESS_KEY_ID=$MGMT_AWS_ACCESS_KEY_ID
+            export AWS_SECRET_ACCESS_KEY=$MGMT_AWS_SECRET_ACCESS_KEY
+            export AWS_SESSION_TOKEN=$MGMT_AWS_SESSION_TOKEN
+
+            creds=$(aws sts assume-role \
+              --role-arn arn:aws:iam::$account_id:role/OrganizationAccountAccessRole \
+              --role-session-name prowler-session \
+              --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+              --output text)
+
+            export AWS_ACCESS_KEY_ID=$(echo $creds | awk '{print $1}')
+            export AWS_SECRET_ACCESS_KEY=$(echo $creds | awk '{print $2}')
+            export AWS_SESSION_TOKEN=$(echo $creds | awk '{print $3}')
+
+            prowler aws -M html --services iam --output-file prowler-report-$account_id --region $AWS_REGION || true
+
+            mkdir -p reports
+            mv output/prowler-report-$account_id* reports/
+          done < accounts.txt
+
+      - name: Upload Prowler reports to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: prowler-reports
+          path: reports/
