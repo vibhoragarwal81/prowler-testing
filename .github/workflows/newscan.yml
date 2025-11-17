@@ -57,8 +57,8 @@ jobs:
             export AWS_SECRET_ACCESS_KEY=$(echo $creds | awk '{print $2}')
             export AWS_SESSION_TOKEN=$(echo $creds | awk '{print $3}')
 
-            prowler -M csv,html -A $account_id -R $AWS_REGION \
-              --output-filename prowler-report-$account_id
+            prowler aws --output-formats csv html --output-file prowler-report-$account_id --region $AWS_REGION --account-uid $account_id
+
 
             mkdir -p reports
             mv prowler-report-$account_id* reports/
