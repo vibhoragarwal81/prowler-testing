@@ -40,12 +40,7 @@ jobs:
           pip install boto3 prowler
 
           
-      - name: Debug Environment Variables
-        run: env | grep MANAGEMENT_ROLE_ARN
-
       - name: Create ProwlerAuditRole in downstream accounts
-        env:
-          MANAGEMENT_ROLE_ARN: ${{ secrets.MANAGEMENT_ROLE_ARN }}
         run: |
           python create_prowler_roles.py
 
