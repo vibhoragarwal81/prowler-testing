@@ -60,7 +60,7 @@ jobs:
             prowler aws -M html --services iam --output-file prowler-report-$account_id --region $AWS_REGION || true
 
             mkdir -p reports
-            mv prowler-report-$account_id* reports/
+            mv output/prowler-report-$account_id* reports/
           done < accounts.txt
 
       - name: Upload Prowler reports to GitHub
