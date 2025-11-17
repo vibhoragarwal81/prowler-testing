@@ -1,0 +1,71 @@
+name: Prowler Org Scan
+
+on:
+  workflow_dispatch:
+
+jobs:
+  newscan:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    env:
+      AWS_REGION: us-east-1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Optional: Authenticate to Azure if using Entra OIDC (skip if using GitHub OIDC)
+      # - name: Azure Login
+      #   run: |
+      #     az login --service-principal \
+      #       --tenant ${{ secrets.AZURE_TENANT_ID }} \
+      #       --username ${{ secrets.AZURE_CLIENT_ID }} \
+      #       --password ${{ secrets.AZURE_CLIENT_SECRET }} \
+      #       --allow-no-subscriptions
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.MANAGEMENT_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: prowlersession
+
+      - name: Install Prowler
+        run: |
+          pip install prowler
+
+      - name: Get list of AWS accounts in the org
+        id: list_accounts
+        run: |
+          aws organizations list-accounts --query "Accounts[?Status=='ACTIVE'].Id" --output text | tr '\t' '\n' > accounts.txt
+          cat accounts.txt
+
+      - name: Run Prowler scan on each account
+        run: |
+          while read account_id; do
+            echo "Scanning account: $account_id"
+            creds=$(aws sts assume-role \
+              --role-arn arn:aws:iam::$account_id:role/OrganizationAccountAccessRole \
+              --role-session-name prowler-session \
+              --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+              --output text)
+
+            export AWS_ACCESS_KEY_ID=$(echo $creds | awk '{print $1}')
+            export AWS_SECRET_ACCESS_KEY=$(echo $creds | awk '{print $2}')
+            export AWS_SESSION_TOKEN=$(echo $creds | awk '{print $3}')
+
+            prowler -M csv,json,html -A $account_id -R $AWS_REGION \
+              --output-filename prowler-report-$account_id
+
+            mkdir -p reports
+            mv prowler-report-$account_id* reports/
+          done < accounts.txt
+
+      - name: Upload Prowler reports to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: prowler-reports
+          path: reports/
