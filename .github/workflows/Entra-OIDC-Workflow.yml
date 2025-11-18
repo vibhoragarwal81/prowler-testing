@@ -1,0 +1,141 @@
+name: Entra-OIDC-Workflow
+ 
+on:
+  workflow_dispatch:
+ 
+jobs:
+  Entra-OIDC-Workflow:
+    runs-on: ubuntu-latest
+ 
+    # This is needed because Entra workload identity uses the GitHub OIDC token under the hood
+    permissions:
+      id-token: write
+      contents: read
+ 
+    env:
+      AWS_REGION: us-east-1
+ 
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+ 
+      # 1) Login to Microsoft Entra using workload identity (NO client secret)
+      #    Pre-req in Entra:
+      #    - App registration with a Federated Credential of type "GitHub"
+      #    - Subject matches this repo / branch / workflow
+      - name: Login to Entra with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}      # your Entra app's client ID
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}      # your Entra tenant ID
+          allow-no-subscriptions: true                   # if there’s no Azure subscription, this is important
+ 
+      - name: Install jq (for parsing JSON)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+ 
+      # 2) Get an Entra access token for the app that AWS trusts as OIDC IdP
+      #    AZURE_RESOURCE_APP_ID_URI must match what you configured as "audience / client ID"
+      #    in the AWS OIDC provider trust.
+      - name: Get Entra OIDC token for AWS
+        id: entra-token
+        env:
+          AZURE_RESOURCE_APP_ID_URI: ${{ vars.AZURE_RESOURCE_APP_ID_URI }}
+          # e.g. "api://<your-entra-app-id>" or whatever you used as the "Application ID URI"
+        run: |
+          TOKEN=$(az account get-access-token \
+            --resource $AZURE_RESOURCE_APP_ID_URI \
+            --query accessToken -o tsv)
+ 
+          if [ -z "$TOKEN" ]; then
+            echo "Failed to obtain Entra access token"
+            exit 1
+          fi
+ 
+          echo "ENTRA_WEB_IDENTITY_TOKEN=$TOKEN" >> $GITHUB_ENV
+ 
+      # 3) Exchange Entra token with AWS STS (AssumeRoleWithWebIdentity)
+      #    Pre-req in AWS:
+      #    - OIDC provider with issuer: https://login.microsoftonline.com/<tenant-id>/v2.0
+      #    - Client ID / audience matches AZURE_RESOURCE_APP_ID_URI
+      #    - Role ${{ secrets.MANAGEMENT_ROLE_ARN }} trusts that provider
+      - name: Exchange Entra token for AWS credentials (management account)
+        id: aws-creds
+        env:
+          AWS_ROLE_ARN: ${{ secrets.MANAGEMENT_ROLE_ARN }}   # role in mgmt account that trusts Entra OIDC
+        run: |
+          CREDS_JSON=$(aws sts assume-role-with-web-identity \
+            --role-arn "$AWS_ROLE_ARN" \
+            --role-session-name "prowlersession" \
+            --web-identity-token "$ENTRA_WEB_IDENTITY_TOKEN" \
+            --duration-seconds 3600 \
+            --query 'Credentials' \
+            --output json)
+ 
+          echo "$CREDS_JSON" > /tmp/creds.json
+          cat /tmp/creds.json
+ 
+          echo "AWS_ACCESS_KEY_ID=$(jq -r '.AccessKeyId' /tmp/creds.json)" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=$(jq -r '.SecretAccessKey' /tmp/creds.json)" >> $GITHUB_ENV
+          echo "AWS_SESSION_TOKEN=$(jq -r '.SessionToken' /tmp/creds.json)" >> $GITHUB_ENV
+ 
+      - name: Install Prowler
+        run: pip install prowler
+ 
+      - name: Get list of AWS accounts in the org
+        id: list_accounts
+        run: |
+          aws organizations list-accounts \
+            --query "Accounts[?Status=='ACTIVE'].Id" \
+            --output text | tr '\t' '\n' > accounts.txt
+ 
+          echo "Accounts found:"
+          cat accounts.txt
+ 
+      - name: Save management account credentials
+        id: save_creds
+        run: |
+          echo "MGMT_AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID" >> $GITHUB_ENV
+          echo "MGMT_AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY" >> $GITHUB_ENV
+          echo "MGMT_AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN" >> $GITHUB_ENV
+          echo "MGMT_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
+ 
+      - name: Run Prowler scan on each account
+        run: |
+          while read account_id; do
+            if [ "$account_id" = "$MGMT_ACCOUNT_ID" ]; then
+              echo "Skipping management account: $account_id"
+              continue
+            fi
+ 
+            echo "Scanning account: $account_id"
+ 
+            # Reset to management account credentials before each assume-role
+            export AWS_ACCESS_KEY_ID=$MGMT_AWS_ACCESS_KEY_ID
+            export AWS_SECRET_ACCESS_KEY=$MGMT_AWS_SECRET_ACCESS_KEY
+            export AWS_SESSION_TOKEN=$MGMT_AWS_SESSION_TOKEN
+ 
+            creds=$(aws sts assume-role \
+              --role-arn arn:aws:iam::$account_id:role/OrganizationAccountAccessRole \
+              --role-session-name prowlersession \
+              --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' \
+              --output text)
+ 
+            export AWS_ACCESS_KEY_ID=$(echo $creds | awk '{print $1}')
+            export AWS_SECRET_ACCESS_KEY=$(echo $creds | awk '{print $2}')
+            export AWS_SESSION_TOKEN=$(echo $creds | awk '{print $3}')
+ 
+            prowler aws -M html --services iam \
+              --output-file prowler-report-$account_id \
+              --region $AWS_REGION || true
+ 
+            mkdir -p reports
+            mv output/prowler-report-$account_id* reports/
+          done < accounts.txt
+ 
+      - name: Upload Prowler reports to GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: prowler-reports
+          path: reports/
