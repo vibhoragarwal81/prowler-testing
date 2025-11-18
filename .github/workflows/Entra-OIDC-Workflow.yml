@@ -45,7 +45,7 @@ jobs:
           # e.g. "api://<your-entra-app-id>" or whatever you used as the "Application ID URI"
         run: |
           TOKEN=$(az account get-access-token \
-            --resource $AZURE_RESOURCE_APP_ID_URI \
+            --resource api://vibhor-aws-prowler \
             --query accessToken -o tsv)
  
           if [ -z "$TOKEN" ]; then
