@@ -54,6 +54,9 @@ jobs:
           fi
  
           echo "ENTRA_WEB_IDENTITY_TOKEN=$TOKEN" >> $GITHUB_ENV
+
+          echo "$GITHUB_ENV" > /tmp/githubenv.json
+          cat /tmp/githubenv.json
  
       # 3) Exchange Entra token with AWS STS (AssumeRoleWithWebIdentity)
       #    Pre-req in AWS:
