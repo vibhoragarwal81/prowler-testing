@@ -36,44 +36,29 @@ No AWS_ACCESS_KEY_ID
 No AWS_SECRET_ACCESS_KEY
 Everything is short-lived, retrieved from STS
 Everything else (Prowler install, loops, scanning) stays same
-2. What needs to be set up outside the YAML
-2.1 In AWS
-Create an OIDC Identity Provider
-URL: https://token.actions.githubusercontent.com
-Audience: sts.amazonaws.com
-Create IAM Role for GitHub to assume
-Example trust policy:
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Federated": "arn:aws:iam::<MGMT_ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com"
-      },
-      "Action": "sts:AssumeRoleWithWebIdentity",
-      "Condition": {
-        "StringEquals": {
-          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-        },
-        "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:<org>/<repo>:ref:refs/heads/main"
-        }
-      }
-    }
-  ]
-}
-Permissions to attach
-organizations:ListAccounts
-sts:AssumeRole (into member accounts)
-Prowler-required service permissions
-Member account role (optional)
-e.g. OrganizationAccountAccessRole or a custom Prowler role
-2.2 In GitHub
-Store:
-MANAGEMENT_ROLE_ARN
-Workflow repo + branch must match the IAM trust policy.
-3. Full workflow (end-to-end)
+
+- What needs to be set up outside the YAML
+  In AWS
+       Create an OIDC Identity Provider
+       URL: https://token.actions.githubusercontent.com
+       Audience: sts.amazonaws.com
+       Create IAM Role for GitHub to assume
+       Trust policy that allow the Federated Principal oidc-provider/token.actions.githubusercontent.com to do the Action sts:AssumeRoleWithWebIdentity
+       With a Condition StringEquals "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        token.actions.githubusercontent.com:sub": "repo:<org>/<repo>:ref:refs/heads/main"
+        
+- Permissions to attach
+     organizations:ListAccounts
+     sts:AssumeRole (into member accounts)
+     Prowler-required service permissions
+     Member account role (optional)
+     e.g. OrganizationAccountAccessRole or a custom Prowler role
+- In GitHub
+      Store:
+      MANAGEMENT_ROLE_ARN
+      Workflow repo + branch must match the IAM trust policy.
+### Full workflow (end-to-end)
+````
 GitHub job starts with id-token: write
 GitHub OIDC issues token describing:
 repo
@@ -92,6 +77,8 @@ SessionToken
 GitHub workflow exports them
 Prowler runs using these STS credentials
 Credentials expire automatically
+````
+
 4. What AWS sees
 FieldValueIdentity ProviderGitHub OIDCIssuerhttps://token.actions.githubusercontent.comKey Claimsub = repo:<org>/<repo>:ref:refs/heads/mainAWS Identityarn:aws:sts::<acct>:assumed-role/<GitHubRole>/prowlersession
 AWS never sees Microsoft Entra in this solution.
