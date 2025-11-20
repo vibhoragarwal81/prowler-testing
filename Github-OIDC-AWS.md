@@ -1,4 +1,4 @@
-# GitHub OIDC → AWS STS (Prowler Org Scan)
+# AWS Org scan using Prowler (GitHub OIDC → AWS STS)
  
 This document explains the solution where **GitHub Actions OIDC token** is exchanged directly with **AWS STS** to assume a role and run the Prowler org scan.
  
@@ -128,3 +128,4 @@ workflow identity
 | Key Claim | sub = repo:<org>/<repo>:ref:refs/heads/main |
 | AWS Identity | arn:aws:sts::<acct>:assumed-role/<GitHubRole>/prowlersession |
  
+<img width="7020" height="2812" alt="image" src="https://github.com/user-attachments/assets/f335348a-f58b-42dd-adea-88423e2a6b96" />
