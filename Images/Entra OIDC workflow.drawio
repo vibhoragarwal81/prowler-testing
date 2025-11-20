@@ -1,0 +1,109 @@
+<mxfile host="Electron" modified="2025-11-19T18:51:24.306Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.2.5 Chrome/120.0.6099.109 Electron/28.1.0 Safari/537.36" etag="NgSsshIQF52os1l28VNq" version="24.2.5" type="device">
+  <diagram name="Page-1" id="uvgGAEFsqrK5qziDPl5R">
+    <mxGraphModel dx="1050" dy="717" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="CTvoc-mkrjThSynEjs5V-1" value="GitHub Actions Workflow" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="199" height="1167" as="geometry" />
+        </mxCell>
+        <mxCell id="CTvoc-mkrjThSynEjs5V-2" value="GitHub OIDC Provider" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="299" y="20" width="176" height="1167" as="geometry" />
+        </mxCell>
+        <mxCell id="CTvoc-mkrjThSynEjs5V-3" value="Microsoft Entra ID&#xa;(Azure AD)" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="525" y="20" width="150" height="1167" as="geometry" />
+        </mxCell>
+        <mxCell id="CTvoc-mkrjThSynEjs5V-4" value="AWS STS" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="725" y="20" width="150" height="1167" as="geometry" />
+        </mxCell>
+        <mxCell id="CTvoc-mkrjThSynEjs5V-5" value="AWS IAM Role&#xa;(Management Account)" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="925" y="20" width="186" height="1167" as="geometry" />
+        </mxCell>
+        <mxCell id="CTvoc-mkrjThSynEjs5V-6" value="Prowler Execution&#xa;(Child Accounts)" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="1192" y="20" width="150" height="1167" as="geometry" />
+        </mxCell>
+        <mxCell id="CTvoc-mkrjThSynEjs5V-7" value="Request GitHub OIDC token&#xa;permissions: id-token: write" style="verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;fontStyle=1" edge="1" parent="1" source="CTvoc-mkrjThSynEjs5V-1" target="CTvoc-mkrjThSynEjs5V-2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="263" y="151" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="CTvoc-mkrjThSynEjs5V-8" value="Return GitHub OIDC JWT&#xa;(repo/branch/sub)" style="verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;fontStyle=1" edge="1" parent="1" source="CTvoc-mkrjThSynEjs5V-2" target="CTvoc-mkrjThSynEjs5V-1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="263" y="227" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="CTvoc-mkrjThSynEjs5V-9" value="azure/login → Present GitHub OIDC token" style="verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;fontStyle=1" edge="1" parent="1" source="CTvoc-mkrjThSynEjs5V-1" target="CTvoc-mkrjThSynEjs5V-3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="370" y="281" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="CTvoc-mkrjThSynEjs5V-10" value="Validate via Federated Credential:&#xa;- mapped repo&#xa;- mapped branch&#xa;- mapped workflow" style="curved=1;rounded=0;fontStyle=1" edge="1" parent="1" source="CTvoc-mkrjThSynEjs5V-3" target="CTvoc-mkrjThSynEjs5V-3">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="650" y="401" />
+              <mxPoint x="650" y="431" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="CTvoc-mkrjThSynEjs5V-11" value="Issue Entra Access Token&#xa;aud = api://aws-sts-entra&#xa;appid = Entra App ID&#xa;iss = login.microsoftonline.com" style="verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;fontStyle=1" edge="1" parent="1" source="CTvoc-mkrjThSynEjs5V-3" target="CTvoc-mkrjThSynEjs5V-1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="370" y="551" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="CTvoc-mkrjThSynEjs5V-12" value="AssumeRoleWithWebIdentity&#xa;Send **Entra OIDC Token**" style="verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;fontStyle=1" edge="1" parent="1" source="CTvoc-mkrjThSynEjs5V-1" target="CTvoc-mkrjThSynEjs5V-4">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="470" y="627" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="CTvoc-mkrjThSynEjs5V-13" value="Validate token:&#xa;- issuer = Entra OIDC&#xa;- audience = api://aws-sts-entra&#xa;- appid matches trust policy" style="curved=1;rounded=0;fontStyle=1" edge="1" parent="1" source="CTvoc-mkrjThSynEjs5V-4" target="CTvoc-mkrjThSynEjs5V-4">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="850" y="747" />
+              <mxPoint x="850" y="777" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="CTvoc-mkrjThSynEjs5V-14" value="Temporary AWS creds&#xa;(AccessKey, Secret Access Key, Session token)" style="verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;fontStyle=1" edge="1" parent="1" source="CTvoc-mkrjThSynEjs5V-4" target="CTvoc-mkrjThSynEjs5V-1">
+          <mxGeometry x="-0.0012" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="470" y="853" />
+            </Array>
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="CTvoc-mkrjThSynEjs5V-15" value="Assume Role" style="verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;fontStyle=1" edge="1" parent="1" source="CTvoc-mkrjThSynEjs5V-1" target="CTvoc-mkrjThSynEjs5V-6">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="728" y="907" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="CTvoc-mkrjThSynEjs5V-16" value="List resources, scan," style="verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;fontStyle=1" edge="1" parent="1" source="CTvoc-mkrjThSynEjs5V-6" target="CTvoc-mkrjThSynEjs5V-5">
+          <mxGeometry x="-0.0022" relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1177" y="961" />
+            </Array>
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="CTvoc-mkrjThSynEjs5V-17" value="Scan results" style="verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;fontStyle=1" edge="1" parent="1" source="CTvoc-mkrjThSynEjs5V-1" target="CTvoc-mkrjThSynEjs5V-6">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1177" y="1015" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

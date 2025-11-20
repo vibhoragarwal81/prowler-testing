@@ -1,0 +1,85 @@
+<mxfile host="Electron" modified="2025-11-19T18:57:19.144Z" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.2.5 Chrome/120.0.6099.109 Electron/28.1.0 Safari/537.36" etag="w4eUzPiG-ub6w1cnzGn3" version="24.2.5" type="device">
+  <diagram name="Page-1" id="xrpwQOJLlI578Nijwucf">
+    <mxGraphModel dx="1400" dy="956" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="8w8qg92m6mvKWmz--ion-30" value="GitHub Actions Workflow" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;" vertex="1" parent="1">
+          <mxGeometry x="30" y="80" width="199" height="931" as="geometry" />
+        </mxCell>
+        <mxCell id="8w8qg92m6mvKWmz--ion-31" value="GitHub OIDC Provider&#xa;(token.actions.githubusercontent.com)" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;" vertex="1" parent="1">
+          <mxGeometry x="359" y="80" width="291" height="931" as="geometry" />
+        </mxCell>
+        <mxCell id="8w8qg92m6mvKWmz--ion-32" value="AWS STS" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;" vertex="1" parent="1">
+          <mxGeometry x="700" y="80" width="150" height="931" as="geometry" />
+        </mxCell>
+        <mxCell id="8w8qg92m6mvKWmz--ion-33" value="AWS IAM Role&#xa;(Management Account)" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;" vertex="1" parent="1">
+          <mxGeometry x="910" y="80" width="186" height="931" as="geometry" />
+        </mxCell>
+        <mxCell id="8w8qg92m6mvKWmz--ion-34" value="Prowler Execution" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;container=1;dropTarget=0;collapsible=0;recursiveResize=0;outlineConnect=0;portConstraint=eastwest;newEdgeStyle={&quot;edgeStyle&quot;:&quot;elbowEdgeStyle&quot;,&quot;elbow&quot;:&quot;vertical&quot;,&quot;curved&quot;:0,&quot;rounded&quot;:0};size=65;" vertex="1" parent="1">
+          <mxGeometry x="1192" y="80" width="150" height="931" as="geometry" />
+        </mxCell>
+        <mxCell id="8w8qg92m6mvKWmz--ion-35" value="Request OIDC token&#xa;permissions: id-token: write" style="verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1" source="8w8qg92m6mvKWmz--ion-30" target="8w8qg92m6mvKWmz--ion-31">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="357" y="211" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8w8qg92m6mvKWmz--ion-36" value="Return JWT containing:&#xa;- repo&#xa;- branch&#xa;- workflow info&#xa;- issuer (GitHub OIDC)" style="verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;" edge="1" parent="1" source="8w8qg92m6mvKWmz--ion-31" target="8w8qg92m6mvKWmz--ion-30">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="357" y="353" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8w8qg92m6mvKWmz--ion-37" value="AssumeRoleWithWebIdentity&#xa;Send GitHub OIDC token" style="verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1" source="8w8qg92m6mvKWmz--ion-30" target="8w8qg92m6mvKWmz--ion-32">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="492" y="429" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8w8qg92m6mvKWmz--ion-38" value="Validate token:&#xa;- issuer = GitHub OIDC&#xa;- audience = sts.amazonaws.com&#xa;- sub = repo:org/repo:ref:branch" style="curved=1;rounded=0;" edge="1" parent="1" source="8w8qg92m6mvKWmz--ion-32" target="8w8qg92m6mvKWmz--ion-32">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="815" y="549" />
+              <mxPoint x="815" y="579" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8w8qg92m6mvKWmz--ion-39" value="Temporary AWS creds&#xa;AKIA..., Secret..., SessionToken" style="verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;" edge="1" parent="1" source="8w8qg92m6mvKWmz--ion-32" target="8w8qg92m6mvKWmz--ion-30">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="492" y="655" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8w8qg92m6mvKWmz--ion-40" value="Export credentials to env" style="verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1" source="8w8qg92m6mvKWmz--ion-30" target="8w8qg92m6mvKWmz--ion-34">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="733" y="709" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8w8qg92m6mvKWmz--ion-41" value="ListAccounts, Scan Services,&#xa;Assume member roles" style="verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;" edge="1" parent="1" source="8w8qg92m6mvKWmz--ion-34" target="8w8qg92m6mvKWmz--ion-33">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1125" y="785" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8w8qg92m6mvKWmz--ion-42" value="Prowler results" style="verticalAlign=bottom;endArrow=block;edgeStyle=elbowEdgeStyle;elbow=vertical;curved=0;rounded=0;dashed=1;dashPattern=2 3;" edge="1" parent="1" source="8w8qg92m6mvKWmz--ion-33" target="8w8qg92m6mvKWmz--ion-34">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="1125" y="839" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="8w8qg92m6mvKWmz--ion-43" value="AWS sees ONLY GitHub identity&#xa;(repo/branch), NOT Entra" style="fillColor=#ffff88;strokeColor=#9E916F;" vertex="1" parent="1">
+          <mxGeometry x="740" y="859" width="268" height="67" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
