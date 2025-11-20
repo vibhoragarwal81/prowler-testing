@@ -65,4 +65,50 @@ Entra ID matters only when we want:
 ---
  
 
-For GitHub pipelines assuming AWS roles, **GitHub OIDC is the right choice**.
+# GitHub OIDC vs Microsoft Entra OIDC → AWS STS  
+### Combined Comparison for Prowler Org-Scan Pipeline
+ 
+This document compares **two methods** of obtaining AWS STS credentials inside a GitHub Actions workflow:
+ 
+1. **GitHub OIDC → AWS STS**  
+2. **Microsoft Entra OIDC → AWS STS**
+ 
+It explains:
+ 
+- What changes in each solution  
+- What must be configured outside YAML  
+- Full authentication flow  
+- What AWS sees  
+ 
+---
+ 
+# 1. High-Level Comparison
+ 
+| Feature | GitHub OIDC → AWS | Entra OIDC → AWS |
+|--------|--------------------|------------------|
+| Identity Provider for AWS | GitHub | Microsoft Entra |
+| Requires Azure setup | ❌ No | ✅ Yes |
+| Requires GitHub federated credential | ❌ No | ✅ Yes (in Entra) |
+| Requires AWS OIDC provider setup | ✅ Yes | ✅ Yes |
+| AWS sees GitHub repo/branch | ✅ Yes | ❌ No |
+| AWS sees Entra app identity | ❌ No | ✅ Yes |
+| Complexity | ⭐ Simple | ⭐⭐⭐ More complex |
+| Best for | CI/CD directly from GitHub | Enterprises needing Entra governance |
+ 
+---
+ 
+# 2. GitHub OIDC → AWS STS
+ 
+## 2.1 What changes in the YAML
+ 
+```yaml
+permissions:
+  id-token: write
+  contents: read
+ 
+- name: Configure AWS credentials via OIDC
+  uses: aws-actions/configure-aws-credentials@v4
+  with:
+    role-to-assume: ${{ secrets.MANAGEMENT_ROLE_ARN }}
+    aws-region: us-east-1
+    role-session-name: prowlersession
