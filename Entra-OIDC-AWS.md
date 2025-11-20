@@ -138,6 +138,9 @@ Same as GitHub OIDC role.
 
 11.  Tokens expire automatically
 
+## Architecture Diagram
+<img width="1433" height="946" alt="image" src="https://github.com/user-attachments/assets/70be4ead-a459-493b-9fbe-b87ef90411f9" />
+
 ### 4\. What AWS sees in the Entra OIDC solution
 ````
 Field                                                              Value
