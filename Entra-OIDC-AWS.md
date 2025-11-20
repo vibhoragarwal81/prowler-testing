@@ -1,18 +1,18 @@
-# Microsoft Entra OIDC → AWS STS (Prowler Org Scan)
+# AWS Org Scan using Prowler (Microsoft Entra OIDC → AWS STS)
 
 This document explains the solution where GitHub first authenticates to \*\*Microsoft Entra ID using workload identity federation\*\*, obtains an Entra-issued OIDC token, and then uses that Entra token to call \*\*AWS STS\*\*.
 
-AWS sees \*\*Microsoft Entra\*\*, not GitHub, as the identity provider.
+AWS sees \*\*Microsoft Entra\*\*, as the identity provider.
 
-It covers:
+A high level overview is divided in below parts
 
 1\. Primary components in this solution  
 
-2\. What needs to be set up inside and outside the YAML and github repo secrets
+2\. What needs to be set up in the workflow and github repo secrets
 
-3\. Full workflow  
+3\. Full workflow details
 
-4\. What AWS sees  
+4\. what AWS see
 
 \---
 
@@ -97,7 +97,7 @@ This becomes the aud claim in the Entra token and must match AWS's OIDC provider
 
 **2.2 In AWS**
 
-**Create OIDC provider for Microsoft Entra**
+**Create OIDC provider for Microsoft Entra using automation(Terraform)**
 
 *   Provider URL: [https://login.microsoftonline.com](https://login.microsoftonline.com "https://login.microsoftonline.com/")/<TENANT\_ID>/v2.0
 *   Audience: api://aws-sts-entra
@@ -147,3 +147,5 @@ Claimappid                                   �
 AWS Identity                                                      arn:aws:sts::<acct>:assumed-role/<EntraRole>/prowlersession
 GitHub visibility                                                   Not visible to AWS at allAWS sees Microsoft Entra app registration as the caller — not GitHub. |
 ````
+
+
