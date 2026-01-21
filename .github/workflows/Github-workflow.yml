@@ -60,9 +60,7 @@ jobs:
         id: entrajwt
         shell: bash
         run: |
-          b64=$(cut -d'.' -f2 "$TOKEN_FILE"); pad=$(printf '%*s' $(( (4 - ${#b64}%4)%4 )) | tr ' ' '=')
-          echo "$b64$pad" | base64 -d 2>/dev/null | jq '{iss,aud,sub,tid}'
-
+          
           set -euo pipefail
           token=$(az account get-access-token \
             --resource api://${{ secrets.ENTRA_CLIENT_ID }} \
@@ -73,6 +71,9 @@ jobs:
           # Store to file; STS can read from stdin or file. We'll pass via env.
           echo "$token" > $GITHUB_WORKSPACE/web_identity_token.jwt
           echo "token_file=$GITHUB_WORKSPACE/web_identity_token.jwt" >> $GITHUB_OUTPUT
+          b64=$(cut -d'.' -f2 "$TOKEN_FILE"); pad=$(printf '%*s' $(( (4 - ${#b64}%4)%4 )) | tr ' ' '=')
+          echo "$b64$pad" | base64 -d 2>/dev/null | jq '{iss,aud,sub,tid}'
+
 
       - name: Setup Python and AWS CLI + Prowler
         run: |
@@ -165,5 +166,6 @@ jobs:
             prowler aws ${{ inputs.prowler_args }} -M html json -o "output/$acct"
           done
           echo "Prowler org results under ./output/<accountId>"
+
 
 
