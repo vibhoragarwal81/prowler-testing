@@ -70,8 +70,8 @@ jobs:
           fi
           # Store to file; STS can read from stdin or file. We'll pass via env.
           echo "$token" > $GITHUB_WORKSPACE/web_identity_token.jwt
-          # token_file="$GITHUB_WORKSPACE/web_identity_token.jwt"
-          b64=$(cut -d'.' -f2 "$TOKEN"); pad=$(printf '%*s' $(( (4 - ${#b64}%4)%4 )) | tr ' ' '=')
+          token_file="$GITHUB_WORKSPACE/web_identity_token.jwt"
+          b64=$(cut -d'.' -f2 "$token_file"); pad=$(printf '%*s' $(( (4 - ${#b64}%4)%4 )) | tr ' ' '=')
           echo "$b64$pad" | base64 -d 2>/dev/null | jq '{iss,aud,sub,tid}'
 
 
@@ -166,6 +166,7 @@ jobs:
             prowler aws ${{ inputs.prowler_args }} -M html json -o "output/$acct"
           done
           echo "Prowler org results under ./output/<accountId>"
+
 
 
 
