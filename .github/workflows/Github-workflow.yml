@@ -1,0 +1,162 @@
+name: IAM Scan (Prowler via Entra OIDC)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run against a single account or the entire AWS Organization"
+        type: choice
+        required: true
+        options: [single-account, organization]
+      role_arn:
+        description: "ONLY for single-account: exact Role ARN to assume (e.g., arn:aws:iam::123456789012:role/EntraOIDC-ReadOnly)"
+        type: string
+        required: false
+      org_management_role_arn:
+        description: "ONLY for organization: Role ARN in the ORG MANAGEMENT account (e.g., arn:aws:iam::<MGMT_ID>:role/EntraOIDC-ReadOnly)"
+        type: string
+        required: false
+      org_role_name:
+        description: "Target role name present in every account (deployed by StackSets)"
+        type: string
+        default: "EntraOIDC-ReadOnly"
+        required: false
+      prowler_args:
+        description: "Extra prowler args (default runs IAM checks)"
+        type: string
+        default: "--services iam"
+        required: false
+
+permissions:
+  id-token: write   # required for GitHub OIDC → Entra WIF
+  contents: read
+
+env:
+  AWS_REGION: us-east-1   # IAM is global; choose your home region for CLI calls
+
+jobs:
+  iam-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 1) Authenticate to Entra using federated credentials (no secrets; WIF)
+      #    This exchanges the GitHub OIDC token for an Entra token.
+      #    We pick 'allow-no-subscriptions' to avoid needing Azure subscriptions.
+      - name: Azure Login (Entra WIF)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.ENTRA_CLIENT_ID }}
+          tenant-id: ${{ secrets.ENTRA_TENANT_ID }}
+          allow-no-subscriptions: true
+          audience: api://AzureADTokenExchange
+
+      # 2) Obtain a JWT from Entra with audience == <ClientID>
+      #    AWS trust checks :aud equals your Entra App Client ID.
+      - name: Get Entra JWT for AWS STS (aud == ClientID)
+        id: entrajwt
+        shell: bash
+        run: |
+          set -euo pipefail
+          token=$(az account get-access-token \
+            --resource api://${{ secrets.ENTRA_CLIENT_ID }} \
+            --query accessToken -o tsv)
+          if [ -z "$token" ]; then
+            echo "Failed to obtain Entra token"; exit 1
+          fi
+          # Store to file; STS can read from stdin or file. We'll pass via env.
+          echo "$token" > $GITHUB_WORKSPACE/web_identity_token.jwt
+          echo "token_file=$GITHUB_WORKSPACE/web_identity_token.jwt" >> $GITHUB_OUTPUT
+
+      - name: Setup Python and AWS CLI + Prowler
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install awscli jq prowler
+
+      - name: Configure AWS CLI region
+        run: aws configure set region "${AWS_REGION}"
+
+      # Helper function for assuming role with web identity and exporting envs
+      - name: Write assume helper
+        id: helper
+        shell: bash
+        run: |
+          cat > $GITHUB_WORKSPACE/assume_wi.sh << 'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          ROLE_ARN="$1"
+          TOKEN_FILE="$2"
+          SESSION_NAME="$3"
+          CREDS_JSON=$(aws sts assume-role-with-web-identity \
+                         --role-arn "$ROLE_ARN" \
+                         --role-session-name "$SESSION_NAME" \
+                         --duration-seconds 3600 \
+                         --web-identity-token "file://$TOKEN_FILE")
+          export AWS_ACCESS_KEY_ID=$(echo "$CREDS_JSON" | jq -r .Credentials.AccessKeyId)
+          export AWS_SECRET_ACCESS_KEY=$(echo "$CREDS_JSON" | jq -r .Credentials.SecretAccessKey)
+          export AWS_SESSION_TOKEN=$(echo "$CREDS_JSON" | jq -r .Credentials.SessionToken)
+          aws sts get-caller-identity
+          EOF
+          chmod +x $GITHUB_WORKSPACE/assume_wi.sh
+
+      # ---- Branch: Single Account -------------------------------------------------
+      - name: Single-account | Assume and run Prowler
+        if: ${{ inputs.mode == 'single-account' }}
+        shell: bash
+        env:
+          TOKEN_FILE: ${{ steps.entrajwt.outputs.token_file }}
+        run: |
+          set -euo pipefail
+          if [ -z "${{ inputs.role_arn }}" ]; then
+            echo "role_arn is required for single-account mode"; exit 1
+          fi
+
+          $GITHUB_WORKSPACE/assume_wi.sh "${{ inputs.role_arn }}" "$TOKEN_FILE" "prowler-single"
+
+          mkdir -p output
+          prowler aws ${{ inputs.prowler_args }} -M html json -o output
+          echo "Prowler results written to ./output"
+
+      # ---- Branch: Organization ---------------------------------------------------
+      - name: Organization | Assume management and enumerate accounts
+        if: ${{ inputs.mode == 'organization' }}
+        id: org
+        shell: bash
+        env:
+          TOKEN_FILE: ${{ steps.entrajwt.outputs.token_file }}
+        run: |
+          set -euo pipefail
+          if [ -z "${{ inputs.org_management_role_arn }}" ]; then
+            echo "org_management_role_arn is required for organization mode"; exit 1
+          fi
+
+          # Assume into ORG MANAGEMENT account with web identity
+          $GITHUB_WORKSPACE/assume_wi.sh "${{ inputs.org_management_role_arn }}" "$TOKEN_FILE" "prowler-org-mgmt"
+
+          # List ACTIVE accounts (requires Organizations read permissions)
+          ACCOUNTS=$(aws organizations list-accounts --query 'Accounts[?Status==`ACTIVE`].Id' --output text)
+          if [ -z "$ACCOUNTS" ]; then
+            echo "No ACTIVE accounts found in the Org"; exit 1
+          fi
+          echo "accounts=$ACCOUNTS" >> $GITHUB_OUTPUT
+
+      - name: Organization | Iterate and scan each account with Prowler
+        if: ${{ inputs.mode == 'organization' }}
+        shell: bash
+        env:
+          TOKEN_FILE: ${{ steps.entrajwt.outputs.token_file }}
+          ROLE_NAME: ${{ inputs.org_role_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          for acct in ${{ steps.org.outputs.accounts }}; do
+            ROLE_ARN="arn:aws:iam::$acct:role/${ROLE_NAME}"
+            echo "=== Assuming $ROLE_ARN ==="
+            $GITHUB_WORKSPACE/assume_wi.sh "$ROLE_ARN" "$TOKEN_FILE" "prowler-acct-$acct"
+
+            # Run Prowler IAM checks (you can add output modes, filters, etc.)
+            prowler aws ${{ inputs.prowler_args }} -M html json -o "output/$acct"
+          done
+          echo "Prowler org results under ./output/<accountId>"
