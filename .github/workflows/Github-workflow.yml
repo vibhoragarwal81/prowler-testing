@@ -56,6 +56,9 @@ jobs:
       # 2) Obtain a JWT from Entra with audience == <ClientID>
       #    AWS trust checks :aud equals your Entra App Client ID.
       - name: Get Entra JWT for AWS STS (aud == ClientID)
+          b64=$(cut -d'.' -f2 "$TOKEN_FILE"); pad=$(printf '%*s' $(( (4 - ${#b64}%4)%4 )) | tr ' ' '=')
+          echo "$b64$pad" | base64 -d 2>/dev/null | jq '{iss,aud,sub,tid}'
+
         id: entrajwt
         shell: bash
         run: |
@@ -73,7 +76,8 @@ jobs:
       - name: Setup Python and AWS CLI + Prowler
         run: |
           python3 -m pip install --upgrade pip
-          pip install awscli jq prowler
+          pip install awscli jq
+          pip install 'prowler==5.16.1'
 
       - name: Configure AWS CLI region
         run: aws configure set region "${AWS_REGION}"
@@ -160,3 +164,4 @@ jobs:
             prowler aws ${{ inputs.prowler_args }} -M html json -o "output/$acct"
           done
           echo "Prowler org results under ./output/<accountId>"
+
