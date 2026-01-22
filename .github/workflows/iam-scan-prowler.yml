@@ -124,7 +124,7 @@ jobs:
           . "$GITHUB_WORKSPACE/assume_wi.sh" "${{ inputs.role_arn }}" "$TOKEN_FILE" "prowler-single"
 
           mkdir -p output
-          prowler aws ${{ inputs.prowler_args }} -M html csv -o output
+          prowler aws ${{ inputs.prowler_args }} -M html csv -o output -z
           echo "Prowler results written to ./output"
 
       # ---------- Branch: Organization ----------
@@ -161,6 +161,13 @@ jobs:
             ROLE_ARN="arn:aws:iam::$acct:role/${ROLE_NAME}"
             echo "=== Assuming $ROLE_ARN ==="
             . "$GITHUB_WORKSPACE/assume_wi.sh" "$ROLE_ARN" "$TOKEN_FILE" "prowler-acct-$acct"
-            prowler aws ${{ inputs.prowler_args }} -M html csv -o "output/$acct"
+            prowler aws ${{ inputs.prowler_args }} -M html csv -o "output/$acct" -z
           done
           echo "Prowler org results under ./output/<accountId>"
+
+      - name: Upload Prowler Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prowler-reports
+          path: output/
