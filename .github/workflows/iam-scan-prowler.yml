@@ -1,5 +1,5 @@
 
-name: IAM Scan (Prowler via Entra OIDC)
+name: IAM Cloud Scan (Prowler via Entra OIDC)
 
 on:
   workflow_dispatch:
@@ -10,17 +10,17 @@ on:
         required: true
         options: [single-account, organization]
       role_arn:
-        description: "ONLY for single-account: exact Role ARN to assume (e.g., arn:aws:iam::123456789012:role/EntraOIDC-ReadOnly)"
+        description: "ONLY for single-account: exact Role ARN to assume (e.g., arn:aws:iam::123456789012:role/UHG-EntraOIDC-ReadOnly)"
         type: string
         required: false
       org_management_role_arn:
-        description: "ONLY for organization: Role ARN in the ORG MANAGEMENT account (e.g., arn:aws:iam::<MGMT_ID>:role/EntraOIDC-ReadOnly)"
+        description: "ONLY for organization: Role ARN in the ORG MANAGEMENT account (e.g., arn:aws:iam::<MGMT_ID>:role/UHG-EntraOIDC-ReadOnly)"
         type: string
         required: false
       org_role_name:
         description: "Target role name present in every account (deployed by StackSets)"
         type: string
-        default: "EntraOIDC-ReadOnly"
+        default: "UHG-EntraOIDC-ReadOnly"
         required: false
       prowler_args:
         description: "Extra prowler args (default runs IAM checks)"
