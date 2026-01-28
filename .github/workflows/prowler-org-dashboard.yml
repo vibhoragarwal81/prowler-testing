@@ -1,0 +1,145 @@
+name: Prowler Org Scan + Dashboard (Docker, Tunneled)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tunnel:
+        description: "Expose via (ngrok|cloudflare)"
+        type: choice
+        default: ngrok
+        options: [ngrok, cloudflare]
+      hold_minutes:
+        description: "Keep dashboard up for N minutes"
+        type: number
+        default: 60
+  schedule:
+    - cron: "0 3 * * 1"   # Mondays 03:00 UTC
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  scan-and-dashboard:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      MGMT_ACCOUNT_ID: ${{ vars.MGMT_ACCOUNT_ID }}
+      PROWLER_SCAN_ROLE_NAME: ${{ vars.PROWLER_SCAN_ROLE_NAME }}
+      PARALLEL_ACCOUNTS: ${{ vars.PARALLEL_ACCOUNTS }}
+      ORG_ROLE_NAME: ${{ vars.ORG_ROLE_NAME }}
+      TUNNEL_CHOICE: ${{ inputs.tunnel }}
+      HOLD_MINUTES: ${{ inputs.hold_minutes }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Create output directory
+        run: mkdir -p ./output
+
+      - name: List ACTIVE Org accounts
+        id: org
+        shell: bash
+        run: |
+          ACCOUNTS_IN_ORG=$(aws organizations list-accounts \
+            --query "Accounts[?Status=='ACTIVE'].Id" --output text)
+          echo "accounts=$ACCOUNTS_IN_ORG" >> $GITHUB_OUTPUT
+
+      - name: Run Prowler scans in parallel (Docker) across accounts
+        shell: bash
+        env:
+          ACCOUNTS: ${{ steps.org.outputs.accounts }}
+        run: |
+          set -euo pipefail
+          ROLE_TO_ASSUME="${PROWLER_SCAN_ROLE_NAME}"
+          PARALLEL="${PARALLEL_ACCOUNTS:-3}"
+          ORG_ROLE_ARG=""
+          if [[ -n "${ORG_ROLE_NAME:-}" && -n "${MGMT_ACCOUNT_ID:-}" ]]; then
+            ORG_ROLE_ARG="--organizations-role arn:aws:iam::${MGMT_ACCOUNT_ID}:role/${ORG_ROLE_NAME}"
+          fi
+
+          for accountId in ${ACCOUNTS}; do
+            test "$(jobs | wc -l)" -ge "$PARALLEL" && wait || true
+            {
+              docker run --rm \
+                -e AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID}" \
+                -e AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY}" \
+                -e AWS_SESSION_TOKEN="${AWS_SESSION_TOKEN}" \
+                -e AWS_DEFAULT_REGION="${AWS_REGION}" \
+                -v "$PWD/output":/home/prowler/output \
+                toniblyx/prowler:latest \
+                aws \
+                  --role "arn:aws:iam::${accountId}:role/${ROLE_TO_ASSUME}" \
+                  ${ORG_ROLE_ARG} \
+                  -M csv \
+                  -o /home/prowler/output
+            } &
+          done
+          wait
+
+      - name: Upload raw CSVs as artifact (optional)
+        uses: actions/upload-artifact@v4
+        with:
+          name: prowler-csv-outputs
+          path: ./output/*.csv
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Start Prowler dashboard (Docker, port 11666)
+        run: |
+          docker run -d --name prowler-dashboard \
+            -v "$PWD/output":/home/prowler/output \
+            -e HOST=0.0.0.0 \
+            -p 11666:11666 \
+            toniblyx/prowler:latest dashboard
+          sleep 10
+          docker ps --filter "name=prowler-dashboard" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+      # -------- Option A: NGROK (simple) --------
+      - name: Start ngrok tunnel to dashboard (http://localhost:11666)
+        if: ${{ env.TUNNEL_CHOICE == 'ngrok' }}
+        uses: luisboto/ngrok-tunnel-action@v0.2.0
+        with:
+          port: 11666
+          tunnel_type: http
+          timeout: ${{ env.HOLD_MINUTES }}m
+          ngrok_authtoken: ${{ secrets.NGROK_AUTHTOKEN }}
+          save_url_to_filename: ngrok_url.txt
+
+      - name: Show dashboard URL (ngrok)
+        if: ${{ env.TUNNEL_CHOICE == 'ngrok' }}
+        run: |
+          echo "Dashboard URL (valid while workflow is running):"
+          cat ngrok_url.txt || true
+          echo "Open the URL above to access the Prowler dashboard."
+
+      # -------- Option B: Cloudflare Tunnel (enterprise) --------
+      - name: Setup cloudflared
+        if: ${{ env.TUNNEL_CHOICE == 'cloudflare' }}
+        uses: AnimMouse/setup-cloudflared@v2
+
+      - name: Start Cloudflare Tunnel (dashboard on 11666)
+        if: ${{ env.TUNNEL_CHOICE == 'cloudflare' }}
+        uses: AnimMouse/setup-cloudflared/tunnel@v2
+        with:
+          cloudflare_tunnel_credential: ${{ secrets.CLOUDFLARE_TUNNEL_CREDENTIAL }}
+          cloudflare_tunnel_configuration: ${{ secrets.CLOUDFLARE_TUNNEL_CONFIGURATION }}
+          cloudflare_tunnel_id: ${{ vars.CLOUDFLARE_TUNNEL_ID }}
+
+      - name: Keep tunnel open for HOLD_MINUTES
+        if: ${{ env.TUNNEL_CHOICE == 'cloudflare' }}
+        run: |
+          echo "Cloudflare Tunnel started. Keep this job running to retain access."
+          sleep $(( 60 * ${HOLD_MINUTES:-60} ))
+
+      - name: Stop dashboard container
+        if: always()
+        run: |
+          docker rm -f prowler-dashboard || true
